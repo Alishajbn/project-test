@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="bd865e35-3526-4a1d-b9ff-46dc3af870b2" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="0db22358-9ee0-4b84-b384-b363c7afe075" maxEntries="100" entryTtl="100" entryTtlUnit="MINUTES" expirationInterval="10" />
+	<flow name="project-testFlow" doc:id="0951b924-6d9c-488c-8cb0-030876678be9" >
+		<http:listener doc:name="Listener" doc:id="cd6f252a-6ef2-46ac-ad48-dc8bcde8e82d" config-ref="HTTP_Listener_config" path="/store"/>
+		<os:store doc:name="Store" doc:id="aa51ca19-0e7b-44e9-a4f8-e32a95ff5982" key="#[attributes.queryParams.state]" objectStore="Object_store">
+			<os:value ><![CDATA[#[attributes.queryParams.code]]]></os:value>
+		</os:store>
+		<logger level="INFO" doc:name="Logger" doc:id="0cfcb617-aa64-498b-84a7-9691cd767f3f" message="project inserted successfully"/>
+	</flow>
+	<flow name="project-testFlow1" doc:id="4bf65713-f429-4068-913b-048f349c8d24" >
+		<http:listener doc:name="Listener" doc:id="82ea38d0-7af3-4355-b8f0-58a0a6ef87f5" config-ref="HTTP_Listener_config" path="/retrieve"/>
+		<os:retrieve doc:name="Retrieve" doc:id="33a5350d-be9f-4ddf-8f25-d23158cddf2c" key="#[payload.state]" objectStore="Object_store" target="statecode">
+			<os:default-value ><![CDATA[#[payload.state]]]></os:default-value>
+		</os:retrieve>
+		<ee:transform doc:name="Transform Message" doc:id="c2d4fdf3-9363-4ba8-bc0e-03a8dd908cb7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+"name": payload.firstName ++ " " ++ payload.lastName ,
+"gender": payload.gender,
+"city": payload.city,
+"state": vars.statecode // if exists in object store, convert the code else pass the actual input without change	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="5306e245-7376-4b69-84b6-5f0050430a36" path="C:\Users\alisha\Desktop\Dummy\output.txt"/>
+	</flow>
+</mule>
